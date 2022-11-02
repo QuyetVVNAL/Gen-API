@@ -9,20 +9,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.util.List;
 
 @Controller
-public class PostController {
+public class CommentController {
 
     @Autowired
-    private PostRepository PostRepository;
+    private CommentRepository CommentRepository;
 
-    @GetMapping("/posts")
-    public ResponseEntity getAllPost(){
-        List<Post> listPost = PostRepository.findAll();
-        return ResponseEntity.ok(listPost);
+    @GetMapping("/Comments")
+    public ResponseEntity getAllComment(){
+        List<Comment> listComment = CommentRepository.findAll();
+        return ResponseEntity.ok(listComment);
     }
 
-    @DeleteMapping("/posts")
+    @DeleteMapping("/Comments")
     public ResponseEntity<String> delete(){
-        PostRepository.deleteAll();
+        CommentRepository.deleteAll();
         return ResponseEntity.ok("Delete all");
     }
 }

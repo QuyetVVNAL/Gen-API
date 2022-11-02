@@ -7,8 +7,8 @@ import lombok.Setter;
 
 import javax.persistence.*;
 
-@Entity(name = "post")
-@Table(name = "post")
+@Entity(name = "comment")
+@Table(name = "comment")
 @Setter
 @Getter
 @AllArgsConstructor
@@ -19,6 +19,6 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-    @Column(name = "content")
-    private long content;
+    @Column(name = "comment")
+    private long comment;
 }
