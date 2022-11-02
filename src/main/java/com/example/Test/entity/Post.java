@@ -1,4 +1,4 @@
-package com.example.Test;
+package com.example.Test.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;

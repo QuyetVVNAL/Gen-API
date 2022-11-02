@@ -1,5 +1,7 @@
-package com.example.Test;
+package com.example.Test.controller;
 
+import com.example.Test.entity.Post;
+import com.example.Test.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -12,17 +14,17 @@ import java.util.List;
 public class PostController {
 
     @Autowired
-    private PostRepository PostRepository;
+    private PostService PostService;
 
     @GetMapping("/posts")
     public ResponseEntity getAllPost(){
-        List<Post> listPost = PostRepository.findAll();
+        List<Post> listPost = PostService.findAll();
         return ResponseEntity.ok(listPost);
     }
 
     @DeleteMapping("/posts")
     public ResponseEntity<String> delete(){
-        PostRepository.deleteAll();
+        PostService.deleteAll();
         return ResponseEntity.ok("Delete all");
     }
 }

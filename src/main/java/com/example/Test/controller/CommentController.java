@@ -1,5 +1,7 @@
-package com.example.Test;
+package com.example.Test.controller;
 
+import com.example.Test.entity.Comment;
+import com.example.Test.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -12,17 +14,17 @@ import java.util.List;
 public class CommentController {
 
     @Autowired
-    private CommentRepository CommentRepository;
+    private CommentService CommentService;
 
     @GetMapping("/Comments")
     public ResponseEntity getAllComment(){
-        List<Comment> listComment = CommentRepository.findAll();
+        List<Comment> listComment = CommentService.findAll();
         return ResponseEntity.ok(listComment);
     }
 
     @DeleteMapping("/Comments")
     public ResponseEntity<String> delete(){
-        CommentRepository.deleteAll();
+        CommentService.deleteAll();
         return ResponseEntity.ok("Delete all");
     }
 }
