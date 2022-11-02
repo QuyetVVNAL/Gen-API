@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.sql.*;
 import java.util.Set;
 
 @SpringBootApplication
@@ -34,6 +35,21 @@ public class TestApplication implements ApplicationRunner  {
 	@Override
 	public void run( ApplicationArguments args ) throws Exception
 	{
+		try (Connection connection = DriverManager
+				.getConnection("jdbc:mysql://localhost:3306/test?useSSL=false", "root", "!Ngaythu3")) {
+			DatabaseMetaData dbmd = connection.getMetaData();
+			String table[] = {
+					"post", "comment"
+			};
+			ResultSet rs = dbmd.getTables(null, null, null, table);
+
+			while (rs.next()) {
+				System.out.println(rs.getString(3));
+			}
+
+		} catch (SQLException e) {
+			System.out.println(e);
+		}
 		// mvn spring-boot:run -Dspring-boot.run.arguments="--entity.name=Comment --create=true --path=com.example.Test"
 		if(create){
 			String repository = "package "+path+".repository;\n" +
