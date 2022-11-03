@@ -14,6 +14,8 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @SpringBootApplication
@@ -35,17 +37,52 @@ public class TestApplication implements ApplicationRunner  {
 	@Override
 	public void run( ApplicationArguments args ) throws Exception
 	{
+		String catalog = "test";
+		String schemaPattern = "test";
+		List<String> tableList = new ArrayList<>();
 		try (Connection connection = DriverManager
 				.getConnection("jdbc:mysql://localhost:3306/test?useSSL=false", "root", "!Ngaythu3")) {
-			DatabaseMetaData dbmd = connection.getMetaData();
-			String table[] = {
-					"post", "comment"
-			};
-			ResultSet rs = dbmd.getTables(null, null, null, table);
+			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-			while (rs.next()) {
-				System.out.println(rs.getString(3));
+			String userName = databaseMetaData.getUserName();
+			//TODO: get Schemas
+//			try(ResultSet schemas = databaseMetaData.getSchemas()){
+//				while (schemas.next()){
+//					String table_schem = schemas.getString("TABLE_SCHEM");
+//					String table_catalog = schemas.getString("TABLE_CATALOG");
+//					System.out.println(table_catalog + "catalog");
+//				}
+//			}
+
+			try(ResultSet resultSet = databaseMetaData.getTables(catalog, schemaPattern, null,  new String[]{"TABLE"})){
+				while(resultSet.next()) {
+					tableList.add(resultSet.getString("TABLE_NAME"));
+				}
 			}
+			System.out.println(tableList );
+			for (String tableName: tableList) {
+				try(ResultSet columns = databaseMetaData.getColumns(catalog,schemaPattern, tableName, null)){
+					while(columns.next()) {
+						String columnName = columns.getString("COLUMN_NAME");
+						String columnSize = columns.getString("COLUMN_SIZE");
+						String datatype = columns.getString("DATA_TYPE");
+						String isNullable = columns.getString("IS_NULLABLE");
+						String isAutoIncrement = columns.getString("IS_AUTOINCREMENT");
+						System.out.println(columnName + " " + columnSize + " " + datatype + " " + isNullable + " " + isAutoIncrement + " ");
+					}
+				}
+
+				try(ResultSet primaryKeys = databaseMetaData.getPrimaryKeys(catalog, schemaPattern, tableName)){
+					while(primaryKeys.next()){
+						String primaryKeyColumnName = primaryKeys.getString("COLUMN_NAME");
+						String primaryKeyName = primaryKeys.getString("PK_NAME");
+						System.out.println(primaryKeyName + " " + primaryKeyColumnName);
+					}
+				}
+			}
+
+
+
 
 		} catch (SQLException e) {
 			System.out.println(e);
