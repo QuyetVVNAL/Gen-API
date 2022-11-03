@@ -5,14 +5,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Setter
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class TableInfo {
+public class Column {
 
-    String tableName;
-    List<Column> columns;
+    String name;
+    String size;
+    String type;
+    String isNullAble;
+    String isAutoIncrement;
+    String primaryKey;
+    String foreignKey;
 }
