@@ -23,8 +23,8 @@ import java.util.Set;
 @SpringBootApplication
 public class TestApplication implements ApplicationRunner  {
 
-	@Value("${path}")
-	private String path;
+	@Value("${pathDir}")
+	private String pathDir;
 
 	@Value("${create}")
 	private Boolean create;
@@ -56,7 +56,8 @@ public class TestApplication implements ApplicationRunner  {
 
 			try(ResultSet resultSet = databaseMetaData.getTables(catalog, schemaPattern, null,  new String[]{"TABLE"})){
 				while(resultSet.next()) {
-					tableListName.add(resultSet.getString("TABLE_NAME").substring(0,1).toUpperCase() + resultSet.getString(1));
+					tableListName.add(resultSet.getString("TABLE_NAME").substring(0,1).toUpperCase()
+							+ resultSet.getString("TABLE_NAME").substring(1));
 				}
 			}
 			for (String tableName: tableListName) {
@@ -82,13 +83,11 @@ public class TestApplication implements ApplicationRunner  {
 									String primaryKeyName = primaryKeys.getString("PK_NAME");
 									col.setPrimaryKey(primaryKeyName);
 								}
-
 							}
 						}
 						columnList.add(col);
 					}
 				}
-
 				table.setTableName(tableName);
 				table.setColumns(columnList);
 				tableInfos.add(table);
@@ -99,6 +98,7 @@ public class TestApplication implements ApplicationRunner  {
 		}
 		// mvn spring-boot:run -Dspring-boot.run.arguments="--entity.name=Comment --create=true --path=com.example.Test"
 		if(create){
+			// TODO Kiem tra kieu du lieu cua column - Datatype dang la kieu so: 1-int
 			for (TableInfo table: tableInfos) {
 				String column ="";
 				for (Column col: table.getColumns() ) {
@@ -111,7 +111,7 @@ public class TestApplication implements ApplicationRunner  {
 								"    private long stt;\n";
 					}
 				}
-				String entity ="package "+path+".entity;\n" +
+				String entity ="package "+pathDir+".entity;\n" +
 						"\n" +
 						"import lombok.AllArgsConstructor;\n" +
 						"import lombok.Getter;\n" +
@@ -129,19 +129,20 @@ public class TestApplication implements ApplicationRunner  {
 						"@NoArgsConstructor\n" +
 						"public class "+table.getTableName()
 						+" {\n" + column + "}\n";
-				String repository = "package "+path+".repository;\n" +
+				String repository = "package "+pathDir+".repository;\n" +
 						"\n" +
 						"import org.springframework.data.jpa.repository.JpaRepository;\n" +
 						"import org.springframework.stereotype.Repository;\n" +
+						"import "+pathDir+".entity."+table.getTableName()+";\n" +
 						"\n" +
 						"@Repository\n" +
 						"public interface "+table.getTableName()+"Repository extends JpaRepository<"+table.getTableName()+", Long> {\n" +
 						"}" ;
 
-				String serviceImpl ="package "+path+".service;\n" +
+				String serviceImpl ="package "+pathDir+".service;\n" +
 						"\n" +
-						"import "+path+".entity."+table.getTableName()+";\n" +
-						"import "+path+".repository."+table.getTableName()+"Repository;\n" +
+						"import "+pathDir+".entity."+table.getTableName()+";\n" +
+						"import "+pathDir+".repository."+table.getTableName()+"Repository;\n" +
 						"import org.springframework.beans.factory.annotation.Autowired;\n" +
 						"import org.springframework.stereotype.Component;\n" +
 						"\n" +
@@ -162,9 +163,9 @@ public class TestApplication implements ApplicationRunner  {
 						"    }\n" +
 						"}\n";
 
-				String service ="package "+path+".service;\n" +
+				String service ="package "+pathDir+".service;\n" +
 						"\n" +
-						"import "+path+".entity."+table.getTableName()+";\n" +
+						"import "+pathDir+".entity."+table.getTableName()+";\n" +
 						"import org.springframework.stereotype.Service;\n" +
 						"\n" +
 						"import java.util.List;\n" +
@@ -177,10 +178,10 @@ public class TestApplication implements ApplicationRunner  {
 						"    void deleteAll();\n" +
 						"}\n";
 
-				String controller = "package "+path+".controller;\n" +
+				String controller = "package "+pathDir+".controller;\n" +
 						"\n" +
-						"import "+path+".entity."+table.getTableName()+";\n" +
-						"import "+path+".service."+table.getTableName()+"Service;\n" +
+						"import "+pathDir+".entity."+table.getTableName()+";\n" +
+						"import "+pathDir+".service."+table.getTableName()+"Service;\n" +
 						"import org.springframework.beans.factory.annotation.Autowired;\n" +
 						"import org.springframework.http.ResponseEntity;\n" +
 						"import org.springframework.stereotype.Controller;\n" +
@@ -207,28 +208,28 @@ public class TestApplication implements ApplicationRunner  {
 						"        return ResponseEntity.ok(\"Delete all\");\n" +
 						"    }\n" +
 						"}\n";
-				path = path.replace(".", "/");
-				Path entityPath = Paths.get("src/main/java/"+path+"/entity/"+table.getTableName()+".java");
-				Path repositoryPath = Paths.get("src/main/java/"+path+"/repository/"+table.getTableName()+"Repository.java");
-				Path serviceImplPath = Paths.get("src/main/java/"+path+"/service/"+table.getTableName()+"ServiceImpl.java");
-				Path servicePath = Paths.get("src/main/java/"+path+"/service/"+table.getTableName()+"Service.java");
-				Path controllerPath = Paths.get("src/main/java/"+path+"/controller/"+table.getTableName()+"Controller.java");
+				pathDir = pathDir.replace(".", "/");
+				Path entityPath = Paths.get("src/main/java/"+pathDir+"/entity/"+table.getTableName()+".java");
+				Path repositoryPath = Paths.get("src/main/java/"+pathDir+"/repository/"+table.getTableName()+"Repository.java");
+				Path serviceImplPath = Paths.get("src/main/java/"+pathDir+"/service/"+table.getTableName()+"ServiceImpl.java");
+				Path servicePath = Paths.get("src/main/java/"+pathDir+"/service/"+table.getTableName()+"Service.java");
+				Path controllerPath = Paths.get("src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
 
 				Files.write(entityPath, entity.getBytes(StandardCharsets.UTF_8));
-				System.out.println("create" + "src/main/java/"+path+"/entity/"+table.getTableName()+".java");
+				System.out.println("create" + "src/main/java/"+pathDir+"/entity/"+table.getTableName()+".java");
 			Files.write(repositoryPath, repository.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+path+"/repository/"+table.getTableName()+"Repository.java");
+			System.out.println("create" + "src/main/java/"+pathDir+"/repository/"+table.getTableName()+"Repository.java");
 			Files.write(serviceImplPath, serviceImpl.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+path+"/service/"+table.getTableName()+"ServiceImpl.java");
+			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"ServiceImpl.java");
 			Files.write(servicePath, service.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+path+"/service/"+table.getTableName()+"Service.java");
+			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"Service.java");
 			Files.write(controllerPath, controller.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+path+"/controller/"+table.getTableName()+"Controller.java");
+			System.out.println("create" + "src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
 			}
 
 
 		}else {
-			System.out.println("No generate API");
+			System.out.println("Skip generate API....");
 		}
 
 	}
