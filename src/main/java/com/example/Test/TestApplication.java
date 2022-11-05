@@ -5,14 +5,17 @@ import com.example.Test.entity.TableInfo;
 import com.example.Test.entity.TableRelationship;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,9 +72,24 @@ public class TestApplication implements ApplicationRunner  {
 			}
 
 			// Gen file csv table relationship
-			if(createCSV){
+			if(!createCSV){
 				createCSVFromDB(tableListName, databaseMetaData);
 			}
+			// Read file CSV after update relationship
+			Reader in = new FileReader("ER_Diagram.csv");
+			Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
+			List<TableRelationship> tableRelationships = new ArrayList<>();
+			for (CSVRecord record : records) {
+				TableRelationship tableRelationship = new TableRelationship();
+				tableRelationship.setPkTableName(record.get(0));
+				tableRelationship.setPkColumnName(record.get(1));
+				tableRelationship.setFkTableName(record.get(2));
+				tableRelationship.setFkColumnName(record.get(3));
+				tableRelationship.setRelation(record.get(4));
+				tableRelationships.add(tableRelationship);
+			}
+			// Xoa Header
+			tableRelationships.remove(0);
 
 			for (String tableName: tableListName) {
 				List<Column> columnList = new ArrayList<>();

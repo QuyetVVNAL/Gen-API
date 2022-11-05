@@ -1,4 +1,4 @@
 PK table,PK Column,FK table,FK column,"Relation(PK,FK)"
-device,id,device_loan,device_id
-user,id,device_loan,user_id
-role,id,user,role_id
+device,id,device_loan,device_id,"1,1"
+user,id,device_loan,user_id,"1,n"
+role,id,user,role_id,"1,1"
