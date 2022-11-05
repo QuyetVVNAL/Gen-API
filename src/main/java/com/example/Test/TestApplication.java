@@ -2,23 +2,23 @@ package com.example.Test;
 
 import com.example.Test.entity.Column;
 import com.example.Test.entity.TableInfo;
+import com.example.Test.entity.TableRelationship;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @SpringBootApplication
 public class TestApplication implements ApplicationRunner  {
@@ -26,8 +26,17 @@ public class TestApplication implements ApplicationRunner  {
 	@Value("${pathDir}")
 	private String pathDir;
 
-	@Value("${create}")
-	private Boolean create;
+	@Value("${createAPI}")
+	private Boolean createAPI;
+
+	@Value("${createCSV}")
+	private Boolean createCSV;
+
+	@Value("${catalog}")
+	private String catalog;
+
+	@Value("${schemaPattern}")
+	private String schemaPattern;
 
 	public static void main(String[] args) {
 		SpringApplication.run(TestApplication.class, args);
@@ -36,8 +45,6 @@ public class TestApplication implements ApplicationRunner  {
 	@Override
 	public void run( ApplicationArguments args ) throws Exception
 	{
-		String catalog = "test";
-		String schemaPattern = "test";
 		List<String> tableListName = new ArrayList<>();
 		List<TableInfo> tableInfos = new ArrayList<>();
 		try (Connection connection = DriverManager
@@ -60,6 +67,12 @@ public class TestApplication implements ApplicationRunner  {
 							+ resultSet.getString("TABLE_NAME").substring(1));
 				}
 			}
+
+			// Gen file csv table relationship
+			if(createCSV){
+				createCSVFromDB(tableListName, databaseMetaData);
+			}
+
 			for (String tableName: tableListName) {
 				List<Column> columnList = new ArrayList<>();
 				TableInfo table = new TableInfo();
@@ -85,6 +98,7 @@ public class TestApplication implements ApplicationRunner  {
 								}
 							}
 						}
+
 						columnList.add(col);
 					}
 				}
@@ -97,7 +111,7 @@ public class TestApplication implements ApplicationRunner  {
 			System.out.println(e);
 		}
 		// mvn spring-boot:run -Dspring-boot.run.arguments="--entity.name=Comment --create=true --path=com.example.Test"
-		if(create){
+		if(createAPI){
 			// TODO Kiem tra kieu du lieu cua column - Datatype dang la kieu so: 1-int
 			for (TableInfo table: tableInfos) {
 				String column ="";
@@ -232,6 +246,35 @@ public class TestApplication implements ApplicationRunner  {
 			System.out.println("Skip generate API....");
 		}
 
+	}
+
+	public void createCSVFromDB(List<String> tableListName, DatabaseMetaData databaseMetaData) throws IOException, SQLException {
+		String[] HEADERS = { "PK table", "PK Column", "FK table", "FK column", "Relation(PK,FK)"};
+		FileWriter out = new FileWriter("ER_Diagram.csv");
+		List<TableRelationship> tableRelationships = new ArrayList<>();
+		for (String tableName: tableListName) {
+			try(ResultSet foreignKeys = databaseMetaData.getImportedKeys(catalog, schemaPattern, tableName)){
+				while(foreignKeys.next()){
+					TableRelationship tableRelationship = new TableRelationship();
+					String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+					tableRelationship.setPkTableName(pkTableName);
+					String fkTableName = foreignKeys.getString("FKTABLE_NAME");
+					tableRelationship.setFkTableName(fkTableName);
+					String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
+					tableRelationship.setPkColumnName(pkColumnName);
+					String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+					tableRelationship.setFkColumnName(fkColumnName);
+					tableRelationships.add(tableRelationship);
+				}
+			}
+		}
+		try (CSVPrinter printer = new CSVPrinter(out, CSVFormat.DEFAULT
+				.withHeader(HEADERS))) {
+			for (TableRelationship tableRelationship: tableRelationships) {
+				printer.printRecord(tableRelationship.getPkTableName(), tableRelationship.getPkColumnName(),
+						tableRelationship.getFkTableName(), tableRelationship.getFkColumnName());
+			}
+		}
 	}
 
 }

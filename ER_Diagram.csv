@@ -1,0 +1,4 @@
+PK table,PK Column,FK table,FK column,"Relation(PK,FK)"
+device,id,device_loan,device_id
+user,id,device_loan,user_id
+role,id,user,role_id
