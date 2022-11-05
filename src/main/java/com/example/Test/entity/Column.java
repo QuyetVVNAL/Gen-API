@@ -17,5 +17,8 @@ public class Column {
     String isNullAble;
     String isAutoIncrement;
     String primaryKey;
+    String pkTableName;
+    String fkTableName;
     String foreignKey;
+    String relation;
 }

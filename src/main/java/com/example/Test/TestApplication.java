@@ -72,7 +72,7 @@ public class TestApplication implements ApplicationRunner  {
 			}
 
 			// Gen file csv table relationship
-			if(!createCSV){
+			if(createCSV){
 				createCSVFromDB(tableListName, databaseMetaData);
 			}
 			// Read file CSV after update relationship
@@ -107,6 +107,16 @@ public class TestApplication implements ApplicationRunner  {
 						col.setIsNullAble(isNullable);
 						String isAutoIncrement = columns.getString("IS_AUTOINCREMENT");
 						col.setIsAutoIncrement(isAutoIncrement);
+						try(ResultSet foreignKeys = databaseMetaData.getImportedKeys(catalog, schemaPattern, tableName)){
+							while(foreignKeys.next()){
+								String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+								col.setPkTableName(pkTableName);
+								String fkTableName = foreignKeys.getString("FKTABLE_NAME");
+								col.setFkTableName(fkTableName);
+								String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+								col.setForeignKey(fkColumnName);
+							}
+						}
 						try(ResultSet primaryKeys = databaseMetaData.getPrimaryKeys(catalog, schemaPattern, tableName)){
 							while(primaryKeys.next()){
 								String primaryKeyColumnName = primaryKeys.getString("COLUMN_NAME");
@@ -120,6 +130,7 @@ public class TestApplication implements ApplicationRunner  {
 						columnList.add(col);
 					}
 				}
+
 				table.setTableName(tableName);
 				table.setColumns(columnList);
 				tableInfos.add(table);
@@ -128,21 +139,81 @@ public class TestApplication implements ApplicationRunner  {
 		} catch (SQLException e) {
 			System.out.println(e);
 		}
+		// Read file CSV after update relationship
+		Reader in = new FileReader("ER_Diagram.csv");
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
+		List<TableRelationship> tableRelationships = new ArrayList<>();
+		for (CSVRecord record : records) {
+			TableRelationship tableRelationship = new TableRelationship();
+			tableRelationship.setPkTableName(record.get(0));
+			tableRelationship.setPkColumnName(record.get(1));
+			tableRelationship.setFkTableName(record.get(2));
+			tableRelationship.setFkColumnName(record.get(3));
+			tableRelationship.setRelation(record.get(4));
+			tableRelationships.add(tableRelationship);
+		}
+		// Xoa Header
+		tableRelationships.remove(0);
+		// Set relationship table
+		for (TableInfo table: tableInfos) {
+			for (Column col: table.getColumns()) {
+				for (TableRelationship tableRelation: tableRelationships) {
+					switch (tableRelation.getRelation()){
+						case "1,1":
+
+							if(tableRelation.getFkTableName().equals(table.getTableName().toLowerCase())
+								&& tableRelation.getFkColumnName().equals(col.getName())){
+								col.setRelation("OneToOne");
+							}
+						case "1,n":
+						case "n,1":
+						case "n,n":
+						default:
+
+					}
+				}
+			}
+		}
 		// mvn spring-boot:run -Dspring-boot.run.arguments="--entity.name=Comment --create=true --path=com.example.Test"
 		if(createAPI){
 			// TODO Kiem tra kieu du lieu cua column - Datatype dang la kieu so: 1-int
 			for (TableInfo table: tableInfos) {
 				String column ="";
 				for (Column col: table.getColumns() ) {
-					if(col.getPrimaryKey() != null){
-						column += "    @Id\n" +
-								"    @GeneratedValue(strategy = GenerationType.AUTO)\n" +
-								"    private long id; \n";
+					if(col.getPrimaryKey() !=null ){
+
+							column += "    @Id\n" +
+									"    @GeneratedValue(strategy = GenerationType.AUTO)\n" +
+									"    private long id; \n";
+
 					}else {
-						column += "    @Column(name = \""+col.getName()+"\", nullable = true)\n" +
-								"    private long stt;\n";
+							if(col.getRelation() != null){
+								switch (col.getRelation()){
+									case "OneToOne":
+										column += "    @OneToOne()\n" +
+												"    @JoinColumn(name = \""+col.getForeignKey()+"\", referencedColumnName = \"id\")\n" +
+												"    private "+col.getPkTableName().substring(0,1).toUpperCase()+
+															col.getPkTableName().substring(1)+" "+col.getPkTableName().toLowerCase()+";";
+										break;
+									case "OneToMany":
+										System.out.println("chua dinh xu ly 1-n ");
+										break;
+									case "ManyToOne":
+										System.out.println("chua dinh xu ly n-1");
+										break;
+									case "ManyToMany":
+										System.out.println("chua dinh xu ly n-n");
+										break;
+									default:
+
+								}
+							}else {
+								column += "    @Column(name = \""+col.getName()+"\", nullable = true)\n" +
+										"    private long "+col.getName()+";\n";
+							}
 					}
 				}
+
 				String entity ="package "+pathDir+".entity;\n" +
 						"\n" +
 						"import lombok.AllArgsConstructor;\n" +
@@ -153,7 +224,7 @@ public class TestApplication implements ApplicationRunner  {
 						"import javax.persistence.*;\n" +
 						"import javax.persistence.Column;\n" +
 						"\n" +
-						"@Entity(name = \""+table.getTableName()+"\")\n" +
+						"@Entity\n" +
 						"@Table(name = \""+table.getTableName()+"\")\n" +
 						"@Setter\n" +
 						"@Getter\n" +
@@ -257,6 +328,7 @@ public class TestApplication implements ApplicationRunner  {
 			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"Service.java");
 			Files.write(controllerPath, controller.getBytes(StandardCharsets.UTF_8));
 			System.out.println("create" + "src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
+				pathDir = pathDir.replace("/", ".");
 			}
 
 
