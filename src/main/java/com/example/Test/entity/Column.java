@@ -19,6 +19,7 @@ public class Column {
     String primaryKey;
     String pkTableName;
     String fkTableName;
-    String foreignKey;
+    String fkColumnName;
+    String pkColumnName;
     String relation;
 }

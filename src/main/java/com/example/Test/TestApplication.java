@@ -75,21 +75,6 @@ public class TestApplication implements ApplicationRunner  {
 			if(createCSV){
 				createCSVFromDB(tableListName, databaseMetaData);
 			}
-			// Read file CSV after update relationship
-			Reader in = new FileReader("ER_Diagram.csv");
-			Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
-			List<TableRelationship> tableRelationships = new ArrayList<>();
-			for (CSVRecord record : records) {
-				TableRelationship tableRelationship = new TableRelationship();
-				tableRelationship.setPkTableName(record.get(0));
-				tableRelationship.setPkColumnName(record.get(1));
-				tableRelationship.setFkTableName(record.get(2));
-				tableRelationship.setFkColumnName(record.get(3));
-				tableRelationship.setRelation(record.get(4));
-				tableRelationships.add(tableRelationship);
-			}
-			// Xoa Header
-			tableRelationships.remove(0);
 
 			for (String tableName: tableListName) {
 				List<Column> columnList = new ArrayList<>();
@@ -109,12 +94,22 @@ public class TestApplication implements ApplicationRunner  {
 						col.setIsAutoIncrement(isAutoIncrement);
 						try(ResultSet foreignKeys = databaseMetaData.getImportedKeys(catalog, schemaPattern, tableName)){
 							while(foreignKeys.next()){
+
 								String pkTableName = foreignKeys.getString("PKTABLE_NAME");
-								col.setPkTableName(pkTableName);
 								String fkTableName = foreignKeys.getString("FKTABLE_NAME");
-								col.setFkTableName(fkTableName);
+								String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
 								String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
-								col.setForeignKey(fkColumnName);
+								if(columnName.equals(pkColumnName.toLowerCase())) {
+
+									col.setPkTableName(pkTableName);
+									col.setFkTableName(fkTableName);
+									col.setPkColumnName(pkColumnName);
+								}
+								if(columnName.equals(fkColumnName.toLowerCase())){
+									col.setFkColumnName(fkColumnName);
+									col.setPkTableName(pkTableName);
+									col.setFkTableName(fkTableName);
+								}
 							}
 						}
 						try(ResultSet primaryKeys = databaseMetaData.getPrimaryKeys(catalog, schemaPattern, tableName)){
@@ -126,11 +121,9 @@ public class TestApplication implements ApplicationRunner  {
 								}
 							}
 						}
-
 						columnList.add(col);
 					}
 				}
-
 				table.setTableName(tableName);
 				table.setColumns(columnList);
 				tableInfos.add(table);
@@ -139,37 +132,50 @@ public class TestApplication implements ApplicationRunner  {
 		} catch (SQLException e) {
 			System.out.println(e);
 		}
-		// Read file CSV after update relationship
-		Reader in = new FileReader("ER_Diagram.csv");
-		Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
-		List<TableRelationship> tableRelationships = new ArrayList<>();
-		for (CSVRecord record : records) {
-			TableRelationship tableRelationship = new TableRelationship();
-			tableRelationship.setPkTableName(record.get(0));
-			tableRelationship.setPkColumnName(record.get(1));
-			tableRelationship.setFkTableName(record.get(2));
-			tableRelationship.setFkColumnName(record.get(3));
-			tableRelationship.setRelation(record.get(4));
-			tableRelationships.add(tableRelationship);
-		}
-		// Xoa Header
-		tableRelationships.remove(0);
-		// Set relationship table
-		for (TableInfo table: tableInfos) {
-			for (Column col: table.getColumns()) {
-				for (TableRelationship tableRelation: tableRelationships) {
-					switch (tableRelation.getRelation()){
-						case "1,1":
+		if(createAPI){
+			// Read file CSV after update relationship
+			Reader in = new FileReader("ER_Diagram.csv");
+			Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
+			List<TableRelationship> tableRelationships = new ArrayList<>();
+			for (CSVRecord record : records) {
+				TableRelationship tableRelationship = new TableRelationship();
+				tableRelationship.setPkTableName(record.get(0));
+				tableRelationship.setPkColumnName(record.get(1));
+				tableRelationship.setFkTableName(record.get(2));
+				tableRelationship.setFkColumnName(record.get(3));
+				tableRelationship.setRelation(record.get(4));
+				tableRelationships.add(tableRelationship);
+			}
+			// Xoa Header
+			tableRelationships.remove(0);
+			// Set relationship table
+			for (TableInfo table: tableInfos) {
+				for (Column col: table.getColumns()) {
+					for (TableRelationship tableRelation: tableRelationships) {
+						switch (tableRelation.getRelation()){
+							case "1,1":
+								if(tableRelation.getFkTableName().equals(table.getTableName().toLowerCase())
+										&& tableRelation.getFkColumnName().equals(col.getName())){
+									col.setRelation("OneToOne");
+								}
+								break;
+							case "1,n" , "n,1":
 
-							if(tableRelation.getFkTableName().equals(table.getTableName().toLowerCase())
-								&& tableRelation.getFkColumnName().equals(col.getName())){
-								col.setRelation("OneToOne");
-							}
-						case "1,n":
-						case "n,1":
-						case "n,n":
-						default:
-
+								if(tableRelation.getPkTableName().equals(table.getTableName().toLowerCase())
+									&& tableRelation.getPkColumnName().equals(col.getName())){
+									col.setRelation("OneToMany");
+								}
+								if(tableRelation.getFkTableName().equals(table.getTableName().toLowerCase())
+									&& tableRelation.getFkColumnName().equals(col.getName())){
+									col.setRelation("ManyToOne");
+								}
+								break;
+							case "n,n":
+								System.out.println("chua xu ly");
+								break;
+							default:
+								break;
+						}
 					}
 				}
 			}
@@ -191,15 +197,19 @@ public class TestApplication implements ApplicationRunner  {
 								switch (col.getRelation()){
 									case "OneToOne":
 										column += "    @OneToOne()\n" +
-												"    @JoinColumn(name = \""+col.getForeignKey()+"\", referencedColumnName = \"id\")\n" +
+												"    @JoinColumn(name = \""+col.getFkColumnName()+"\", referencedColumnName = \"id\")\n" +
 												"    private "+col.getPkTableName().substring(0,1).toUpperCase()+
-															col.getPkTableName().substring(1)+" "+col.getPkTableName().toLowerCase()+";";
+															col.getPkTableName().substring(1)+" "+col.getPkTableName().toLowerCase()+"; \n";
 										break;
 									case "OneToMany":
-										System.out.println("chua dinh xu ly 1-n ");
+										column += "@OneToMany(mappedBy = \""+col.getPkTableName()+"\")\n" +
+												"    private List<"+table.getTableName()+"> "+col.getFkTableName()+";";
 										break;
 									case "ManyToOne":
-										System.out.println("chua dinh xu ly n-1");
+										column += "    @ManyToOne\n" +
+												"    @JoinColumn(name=\""+col.getFkColumnName()+"\")\n" +
+												"    private "+col.getPkTableName().substring(0,1).toUpperCase()+
+																col.getPkTableName().substring(1)+" "+col.getPkTableName()+";";
 										break;
 									case "ManyToMany":
 										System.out.println("chua dinh xu ly n-n");
@@ -220,6 +230,7 @@ public class TestApplication implements ApplicationRunner  {
 						"import lombok.Getter;\n" +
 						"import lombok.NoArgsConstructor;\n" +
 						"import lombok.Setter;\n" +
+						"import java.util.List;\n"+
 						"\n" +
 						"import javax.persistence.*;\n" +
 						"import javax.persistence.Column;\n" +
@@ -319,15 +330,15 @@ public class TestApplication implements ApplicationRunner  {
 				Path controllerPath = Paths.get("src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
 
 				Files.write(entityPath, entity.getBytes(StandardCharsets.UTF_8));
-				System.out.println("create" + "src/main/java/"+pathDir+"/entity/"+table.getTableName()+".java");
+//				System.out.println("create" + "src/main/java/"+pathDir+"/entity/"+table.getTableName()+".java");
 			Files.write(repositoryPath, repository.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+pathDir+"/repository/"+table.getTableName()+"Repository.java");
+//			System.out.println("create" + "src/main/java/"+pathDir+"/repository/"+table.getTableName()+"Repository.java");
 			Files.write(serviceImplPath, serviceImpl.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"ServiceImpl.java");
+//			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"ServiceImpl.java");
 			Files.write(servicePath, service.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"Service.java");
+//			System.out.println("create" + "src/main/java/"+pathDir+"/service/"+table.getTableName()+"Service.java");
 			Files.write(controllerPath, controller.getBytes(StandardCharsets.UTF_8));
-			System.out.println("create" + "src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
+//			System.out.println("create" + "src/main/java/"+pathDir+"/controller/"+table.getTableName()+"Controller.java");
 				pathDir = pathDir.replace("/", ".");
 			}
 
