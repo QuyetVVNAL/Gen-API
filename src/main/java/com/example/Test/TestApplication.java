@@ -164,6 +164,8 @@ public class TestApplication implements ApplicationRunner  {
 								if(tableRelation.getPkTableName().equals(table.getTableName().toLowerCase())
 									&& tableRelation.getPkColumnName().equals(col.getName())){
 									col.setRelation("OneToMany");
+									col.setFkTableName(tableRelation.getFkTableName());
+									col.setFkColumnName(tableRelation.getFkColumnName());
 								}
 								if(tableRelation.getFkTableName().equals(table.getTableName().toLowerCase())
 									&& tableRelation.getFkColumnName().equals(col.getName())){
@@ -191,7 +193,12 @@ public class TestApplication implements ApplicationRunner  {
 							column += "    @Id\n" +
 									"    @GeneratedValue(strategy = GenerationType.AUTO)\n" +
 									"    private long id; \n";
-
+							if(col.getRelation() != null && col.getRelation().equals("OneToMany")){
+								column += "    @OneToMany(mappedBy = \""+table.getTableName().substring(0,1).toLowerCase()+
+															table.getTableName().substring(1)+"\")\n" +
+										"    private List<"+col.getFkTableName().substring(0,1).toUpperCase()+
+												col.getFkTableName().substring(1)+"> "+col.getFkTableName()+";\n";
+							}
 					}else {
 							if(col.getRelation() != null){
 								switch (col.getRelation()){
