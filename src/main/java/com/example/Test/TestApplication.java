@@ -134,7 +134,7 @@ public class TestApplication implements ApplicationRunner  {
 		}
 		if(createAPI){
 			// Read file CSV after update relationship
-			Reader in = new FileReader("ER_Diagram.csv");
+			Reader in = new FileReader("ER_Diagram_example.csv");
 			Iterable<CSVRecord> records = CSVFormat.DEFAULT.parse(in);
 			List<TableRelationship> tableRelationships = new ArrayList<>();
 			for (CSVRecord record : records) {
@@ -358,7 +358,7 @@ public class TestApplication implements ApplicationRunner  {
 
 	public void createCSVFromDB(List<String> tableListName, DatabaseMetaData databaseMetaData) throws IOException, SQLException {
 		String[] HEADERS = { "PK table", "PK Column", "FK table", "FK column", "Relation(PK,FK)"};
-		FileWriter out = new FileWriter("ER_Diagram.csv");
+		FileWriter out = new FileWriter("ER_Diagram_example.csv");
 		List<TableRelationship> tableRelationships = new ArrayList<>();
 		for (String tableName: tableListName) {
 			try(ResultSet foreignKeys = databaseMetaData.getImportedKeys(catalog, schemaPattern, tableName)){
